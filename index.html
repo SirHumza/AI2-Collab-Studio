@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI2 Collab Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs/loader.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #1e1e1e;
+            color: #dcdcdc;
+        }
+
+        #container {
+            display: flex;
+            flex: 1;
+            min-height: 80vh;
+            margin-top: 10px;
+        }
+
+        #editor-container {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #file-tree {
+            width: 200px;
+            background: #2d2d2d;
+            padding: 10px;
+            overflow-y: auto;
+            border-radius: 5px;
+            margin-left: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #007acc;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .github-corner {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50px;
+            height: 50px;
+            background-color: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            text-decoration: none;
+        }
+
+        .github-corner i {
+            color: white;
+        }
+
+        #fileList {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #fileList li {
+            padding: 5px;
+            cursor: pointer;
+            margin: 2px 0;
+            background-color: #3b3b3b;
+            border-radius: 5px;
+        }
+
+        #fileList li:hover {
+            background-color: #007acc;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="https://github.com/SirHumza/AppInventor-Fusion/" 
+       target="_blank" 
+       class="github-corner">
+        <i class="fab fa-github"></i>
+        <span class="github-text">Made by SirHumza</span>
+    </a>
+
+    <div class="button-container">
+        <button id="newAppBtn">New App</button>
+        <button id="importFileBtn">Import File</button>
+        <button id="openSavedBtn">Open Saved</button>
+    </div>
+
+    <div id="container">
+        <div id="file-tree">
+            <h3>Files</h3>
+            <ul id="fileList"></ul>
+        </div>
+        <div id="editor-container"></div>
+    </div>
+
+    <script>
+        // Placeholder for your project and party logic
+        const partyId = '1234567890'; // Party ID, replace with actual
+        const currentProject = {
+            files: {},
+            // Simulate loading files from a zip project
+            file: function(path) {
+                return {
+                    async: function(type) {
+                        return Promise.resolve(this.files[path] || "");
+                    },
+                    save: function(content) {
+                        this.files[path] = content;
+                    }
+                };
+            }
+        };
+
+        let currentFile = "";
+        let editor;
+        let autoSaveInterval;
+
+        // Monaco Editor Initialization
+        require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: '',
+                language: 'javascript',
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+        });
+
+        // Function to copy only the Party ID
+        function copyPartyId() {
+            navigator.clipboard.writeText(partyId)
+                .then(() => {
+                    alert("Party ID Copied!");
+                })
+                .catch(() => {
+                    alert("Failed to copy Party ID.");
+                });
+        }
+
+        // Autosave every 10 seconds
+        function autoSave() {
+            if (currentFile && (currentFile.endsWith('.scm') || currentFile.endsWith('.bky'))) {
+                const updatedContent = editor.getValue();
+                currentProject.file(currentFile).save(updatedContent);
+                console.log("Auto-saved:", currentFile);
+            }
+        }
+
+        // Start autosave interval
+        function startAutoSave() {
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+            }
+            autoSaveInterval = setInterval(autoSave, 10000); // Autosave every 10 seconds
+        }
+
+        document.getElementById('newAppBtn').addEventListener('click', () => {
+            alert("Creating a new App...");
+            // Your logic for new app creation here
+        });
+
+        document.getElementById('importFileBtn').addEventListener('click', () => {
+            alert("Importing a file...");
+            // Your logic for importing files here
+        });
+
+        document.getElementById('openSavedBtn').addEventListener('click', () => {
+            alert("Opening saved project...");
+            // Your logic for opening a saved project here
+        });
+
+        // Load a file into the editor
+        function openFile(filePath) {
+            currentFile = filePath;
+            currentProject.file(filePath).async('string').then(content => {
+                editor.setValue(content); // Load the file content into Monaco editor
+                startAutoSave(); // Start autosave when file is opened
+            });
+        }
+
+        // Save changes back to the current project
+        editor.onDidChangeModelContent(() => {
+            const updatedContent = editor.getValue();
+
+            // Save to current project
+            if (currentFile && (currentFile.endsWith('.scm') || currentFile.endsWith('.bky'))) {
+                currentProject.file(currentFile).save(updatedContent); // Save the changes to the file
+            }
+        });
+
+        // Simulate a file tree (for demonstration purposes)
+        const fileTree = document.getElementById('fileList');
+
+        // Create file tree (mock files for example)
+        const files = [
+            'index.html',
+            'script.js',
+            'style.css',
+            'project.bky',
+            'screen.scm'
+        ];
+
+        files.forEach(file => {
+            const li = document.createElement('li');
+            li.textContent = file;
+            li.addEventListener('click', () => openFile(file));
+            fileTree.appendChild(li);
+        });
+
+        // Load and display existing project files
+        currentProject.files = {
+            'index.html': '<html><body><h1>Hello World!</h1></body></html>',
+            'script.js': 'console.log("Hello World!");',
+            'style.css': 'body { background-color: lightblue; }',
+            'project.bky': '/* Blockly code here */',
+            'screen.scm': '/* Screen layout code here */'
+        };
+    </script>
+
+</body>
+</html>
