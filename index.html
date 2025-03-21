@@ -5,93 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI2 Collab Studio</title>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs/loader.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #1976d2;
+            --background: #1e1e1e;
+            --surface: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #9e9e9e;
+            --radius: 8px;
+            --spacing: 16px;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
             margin: 0;
-            padding: 0;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            background-color: #1e1e1e;
-            color: #dcdcdc;
-        }
-
-        #container {
-            display: flex;
-            flex: 1;
-            min-height: 80vh;
-            margin-top: 10px;
-        }
-
-        #editor-container {
-            flex: 1;
-            background-color: #1e1e1e;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        #file-tree {
-            width: 200px;
-            background: #2d2d2d;
-            padding: 10px;
-            overflow-y: auto;
-            border-radius: 5px;
-            margin-left: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            margin-top: 20px;
-            cursor: pointer;
-            background-color: #007acc;
-            border: none;
-            color: white;
-            font-size: 16px;
-            border-radius: 5px;
         }
 
         .github-corner {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 50px;
-            height: 50px;
-            background-color: transparent;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            font-size: 20px;
+            gap: 8px;
             text-decoration: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: transform 0.2s ease;
         }
 
-        .github-corner i {
+        .github-corner:hover {
+            transform: translateY(-2px);
+        }
+
+        .container-fluid {
+            flex: 1;
+            padding: var(--spacing);
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: var(--spacing);
+            height: calc(100vh - 120px);
+            background: var(--background);
+        }
+
+        .file-tree {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-tree-header {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 8px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-item.active {
+            background: var(--primary);
             color: white;
         }
 
-        #fileList {
-            list-style-type: none;
-            padding: 0;
+        .monaco-container {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        #fileList li {
-            padding: 5px;
-            cursor: pointer;
-            margin: 2px 0;
-            background-color: #3b3b3b;
-            border-radius: 5px;
-        }
-
-        #fileList li:hover {
-            background-color: #007acc;
-        }
-
-        .button-container {
+        .toolbar {
+            padding: var(--spacing);
+            background: var(--surface);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
-            justify-content: space-around;
-            margin-top: 50px;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .file-icon {
+            width: 18px;
+            height: 18px;
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -104,143 +150,82 @@
         <span class="github-text">Made by SirHumza</span>
     </a>
 
-    <div class="button-container">
-        <button id="newAppBtn">New App</button>
-        <button id="importFileBtn">Import File</button>
-        <button id="openSavedBtn">Open Saved</button>
+    <div class="toolbar">
+        <button class="btn-primary">
+            <i class="fas fa-plus"></i>
+            New App
+        </button>
+        <button class="btn-primary">
+            <i class="fas fa-file-import"></i>
+            Import
+        </button>
+        <button class="btn-primary">
+            <i class="fas fa-folder-open"></i>
+            Open
+        </button>
     </div>
 
-    <div id="container">
-        <div id="file-tree">
-            <h3>Files</h3>
-            <ul id="fileList"></ul>
+    <div class="container-fluid">
+        <div class="editor-container">
+            <div class="file-tree">
+                <div class="file-tree-header">
+                    <h5 class="mb-0">Project Files</h5>
+                    <small class="text-muted">AI2 Fusion Project</small>
+                </div>
+                <ul class="file-list" id="fileList"></ul>
+            </div>
+            
+            <div class="monaco-container">
+                <div id="editor-container" style="height: 100%;"></div>
+            </div>
         </div>
-        <div id="editor-container"></div>
     </div>
 
     <script>
-        // Placeholder for your project and party logic
-        const partyId = '1234567890'; // Party ID, replace with actual
-        const currentProject = {
-            files: {},
-            // Simulate loading files from a zip project
-            file: function(path) {
-                return {
-                    async: function(type) {
-                        return Promise.resolve(this.files[path] || "");
-                    },
-                    save: function(content) {
-                        this.files[path] = content;
-                    }
-                };
-            }
-        };
-
-        let currentFile = "";
-        let editor;
-        let autoSaveInterval;
-
-        // Monaco Editor Initialization
         require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs' } });
         require(['vs/editor/editor.main'], function () {
-            editor = monaco.editor.create(document.getElementById('editor-container'), {
-                value: '',
+            monaco.editor.create(document.getElementById('editor-container'), {
+                value: '// Welcome to AI2 Fusion Studio\n// Start coding your app...',
                 language: 'javascript',
                 theme: 'vs-dark',
-                automaticLayout: true
+                automaticLayout: true,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+                lineNumbers: 'on',
+                roundedSelection: false,
+                scrollbar: {
+                    verticalScrollbarSize: 8,
+                    horizontalScrollbarSize: 8
+                }
             });
         });
 
-        // Function to copy only the Party ID
-        function copyPartyId() {
-            navigator.clipboard.writeText(partyId)
-                .then(() => {
-                    alert("Party ID Copied!");
-                })
-                .catch(() => {
-                    alert("Failed to copy Party ID.");
-                });
-        }
-
-        // Autosave every 10 seconds
-        function autoSave() {
-            if (currentFile && (currentFile.endsWith('.scm') || currentFile.endsWith('.bky'))) {
-                const updatedContent = editor.getValue();
-                currentProject.file(currentFile).save(updatedContent);
-                console.log("Auto-saved:", currentFile);
-            }
-        }
-
-        // Start autosave interval
-        function startAutoSave() {
-            if (autoSaveInterval) {
-                clearInterval(autoSaveInterval);
-            }
-            autoSaveInterval = setInterval(autoSave, 10000); // Autosave every 10 seconds
-        }
-
-        document.getElementById('newAppBtn').addEventListener('click', () => {
-            alert("Creating a new App...");
-            // Your logic for new app creation here
-        });
-
-        document.getElementById('importFileBtn').addEventListener('click', () => {
-            alert("Importing a file...");
-            // Your logic for importing files here
-        });
-
-        document.getElementById('openSavedBtn').addEventListener('click', () => {
-            alert("Opening saved project...");
-            // Your logic for opening a saved project here
-        });
-
-        // Load a file into the editor
-        function openFile(filePath) {
-            currentFile = filePath;
-            currentProject.file(filePath).async('string').then(content => {
-                editor.setValue(content); // Load the file content into Monaco editor
-                startAutoSave(); // Start autosave when file is opened
-            });
-        }
-
-        // Save changes back to the current project
-        editor.onDidChangeModelContent(() => {
-            const updatedContent = editor.getValue();
-
-            // Save to current project
-            if (currentFile && (currentFile.endsWith('.scm') || currentFile.endsWith('.bky'))) {
-                currentProject.file(currentFile).save(updatedContent); // Save the changes to the file
-            }
-        });
-
-        // Simulate a file tree (for demonstration purposes)
-        const fileTree = document.getElementById('fileList');
-
-        // Create file tree (mock files for example)
+        // File tree setup
         const files = [
-            'index.html',
-            'script.js',
-            'style.css',
-            'project.bky',
-            'screen.scm'
+            { name: 'Main Screen.scm', type: 'scm' },
+            { name: 'Main Screen.bky', type: 'bky' },
+            { name: 'config.json', type: 'json' },
+            { name: 'styles.css', type: 'css' },
+            { name: 'app.js', type: 'js' }
         ];
 
+        const fileList = document.getElementById('fileList');
         files.forEach(file => {
             const li = document.createElement('li');
-            li.textContent = file;
-            li.addEventListener('click', () => openFile(file));
-            fileTree.appendChild(li);
+            li.className = 'file-item';
+            li.innerHTML = `
+                <img src="https://img.icons8.com/ios-glyphs/30/9e9e9e/${file.type}-file.png" class="file-icon">
+                ${file.name}
+            `;
+            li.addEventListener('click', () => {
+                document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active'));
+                li.classList.add('active');
+            });
+            fileList.appendChild(li);
         });
-
-        // Load and display existing project files
-        currentProject.files = {
-            'index.html': '<html><body><h1>Hello World!</h1></body></html>',
-            'script.js': 'console.log("Hello World!");',
-            'style.css': 'body { background-color: lightblue; }',
-            'project.bky': '/* Blockly code here */',
-            'screen.scm': '/* Screen layout code here */'
-        };
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
