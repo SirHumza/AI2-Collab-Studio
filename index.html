@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI2 Collab Studio</title>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <style>
         :root {
             --primary: #1976d2;
@@ -89,6 +89,12 @@
             background: var(--primary);
             color: white;
         }
+
+        .binary-warning {
+            color: #ff6b6b;
+            padding: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -142,7 +148,8 @@
                 language: 'javascript',
                 theme: 'vs-dark',
                 automaticLayout: true,
-                minimap: { enabled: true }
+                minimap: { enabled: true },
+                readOnly: true
             });
         });
 
@@ -160,13 +167,21 @@
                 };
 
                 // Process ZIP contents
-                zip.forEach(async (relativePath) => {
-                    const content = await zip.file(relativePath).async('string');
-                    currentProject.files[relativePath] = content;
+                zip.forEach(async (relativePath, file) => {
+                    const isTextFile = /\.(scm|bky|txt|json)$/i.test(relativePath);
+                    const content = isTextFile 
+                        ? await zip.file(relativePath).async('string')
+                        : await zip.file(relativePath).async('uint8array');
+                    
+                    currentProject.files[relativePath] = {
+                        content: content,
+                        isText: isTextFile
+                    };
                 });
 
                 updateFileTree();
                 document.getElementById('projectName').textContent = currentProject.name;
+                alert('Project imported successfully!');
             } catch (error) {
                 alert('Error loading project: ' + error.message);
             }
@@ -177,8 +192,12 @@
             const zip = new JSZip();
             
             // Add all files to ZIP
-            Object.entries(currentProject.files).forEach(([path, content]) => {
-                zip.file(path, content);
+            Object.entries(currentProject.files).forEach(([path, file]) => {
+                if (file.isText) {
+                    zip.file(path, file.content);
+                } else {
+                    zip.file(path, file.content, { binary: true });
+                }
             });
 
             // Generate and download
@@ -193,14 +212,21 @@
             currentProject = {
                 name: 'New Project',
                 files: {
-                    'src/Screen1.scm': '// New Screen',
-                    'src/Screen1.bky': '// Blocks content',
-                    'assets/icon.png': ''
+                    'src/Screen1.scm': {
+                        content: '// New Screen',
+                        isText: true
+                    },
+                    'src/Screen1.bky': {
+                        content: '// Blocks content',
+                        isText: true
+                    }
                 },
                 currentFile: null
             };
             updateFileTree();
             document.getElementById('projectName').textContent = currentProject.name;
+            editor.setValue('// Select a file to start editing');
+            editor.updateOptions({ readOnly: true });
         }
 
         function updateFileTree() {
@@ -217,15 +243,26 @@
         }
 
         function openFile(path) {
+            const file = currentProject.files[path];
+            if (!file.isText) {
+                editor.setValue('// Binary file - Cannot edit');
+                editor.updateOptions({ readOnly: true });
+                return;
+            }
+
             currentProject.currentFile = path;
-            editor.setValue(currentProject.files[path]);
+            editor.setValue(file.content);
+            editor.updateOptions({ readOnly: false });
             updateFileTree();
         }
 
         // Auto-save changes
         editor.onDidChangeModelContent(() => {
             if (currentProject.currentFile) {
-                currentProject.files[currentProject.currentFile] = editor.getValue();
+                const file = currentProject.files[currentProject.currentFile];
+                if (file.isText) {
+                    file.content = editor.getValue();
+                }
             }
         });
 
